@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.29.47.4906",
-      "templateHash": "9960596717556355544"
+      "templateHash": "12431588345311752363"
     }
   },
   "parameters": {
@@ -29,14 +29,66 @@
       "metadata": {
         "description": "The location in which all resources should be deployed."
       }
+    },
+    "storageSkuName": {
+      "type": "string",
+      "defaultValue": "Standard_LRS",
+      "allowedValues": [
+        "Standard_LRS",
+        "Standard_GRS",
+        "Standard_RAGRS",
+        "Standard_ZRS",
+        "Premium_LRS",
+        "Premium_ZRS",
+        "Standard_GZRS",
+        "Standard_RAGZRS"
+      ]
+    },
+    "aiSearchRegion": {
+      "type": "string",
+      "defaultValue": "East US",
+      "allowedValues": [
+        "Brazil South",
+        "Canada Central",
+        "Canada East",
+        "East US",
+        "East US 2",
+        "Central US",
+        "North Central US",
+        "South Central US",
+        "West US",
+        "West US 2",
+        "West US 3",
+        "West Central US",
+        "North Europe",
+        "West Europe 1",
+        "France Central",
+        "Switzerland North",
+        "Switzerland West",
+        "UK South",
+        "UK West",
+        "Australia East",
+        "Australia Southeast",
+        "East Asia",
+        "Southeast Asia",
+        "Central India",
+        "Jio India West",
+        "Japan East",
+        "Japan West",
+        "Korea Central",
+        "Korea South"
+      ],
+      "metadata": {
+        "description": "The region for the Azure AI Search service"
+      }
     }
   },
   "variables": {
     "varMachineLearning": "[format('{0}aml{1}', parameters('namePrefix'), parameters('uniqueid'))]",
     "logWorkspaceName": "[format('log-{0}', parameters('uniqueid'))]",
     "varMLAppInsightsName": "[format('{0}-ml-app-ins-{1}', parameters('namePrefix'), parameters('uniqueid'))]",
-    "varcosmosdbName": "[format('{0}-cosmosdb-research{1}', parameters('namePrefix'), parameters('uniqueid'))]",
     "varStorageAccountName": "[format('{0}mystorage{1}', parameters('namePrefix'), parameters('uniqueid'))]",
+    "varcosmosdbName": "[format('{0}-cosmosdb-{1}', parameters('namePrefix'), parameters('uniqueid'))]",
     "varaiSearchName": "[format('{0}aisearch{1}', parameters('namePrefix'), parameters('uniqueid'))]"
   },
   "resources": [
@@ -82,7 +134,7 @@
       "name": "[variables('varStorageAccountName')]",
       "location": "[parameters('location')]",
       "sku": {
-        "name": "Standard_LRS"
+        "name": "[parameters('storageSkuName')]"
       },
       "kind": "StorageV2",
       "properties": {}
@@ -160,7 +212,7 @@
         },
         "locations": [
           {
-            "locationName": "Sweden Central",
+            "locationName": "[parameters('location')]",
             "failoverPriority": 0,
             "isZoneRedundant": false
           }
@@ -193,7 +245,7 @@
       "type": "Microsoft.Search/searchServices",
       "apiVersion": "2023-11-01",
       "name": "[variables('varaiSearchName')]",
-      "location": "East US",
+      "location": "[parameters('aiSearchRegion')]",
       "sku": {
         "name": "standard"
       },
@@ -225,6 +277,10 @@
       "type": "string",
       "value": "[resourceId('Microsoft.MachineLearningServices/workspaces', variables('varMachineLearning'))]"
     },
+    "storageAccountId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Storage/storageAccounts', variables('varStorageAccountName'))]"
+    },
     "cosmosdbName": {
       "type": "string",
       "value": "[variables('varcosmosdbName')]"
@@ -236,10 +292,6 @@
     "cosmosDbKey": {
       "type": "string",
       "value": "[listKeys(resourceId('Microsoft.DocumentDB/databaseAccounts', variables('varcosmosdbName')), '2024-02-15-preview').primaryMasterKey]"
-    },
-    "storageAccountId": {
-      "type": "string",
-      "value": "[resourceId('Microsoft.Storage/storageAccounts', variables('varStorageAccountName'))]"
     },
     "aiSearchName": {
       "type": "string",
