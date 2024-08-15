@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.29.47.4906",
-      "templateHash": "12296815040804803097"
+      "templateHash": "17622634307393598780"
     }
   },
   "parameters": {
@@ -30,6 +30,17 @@
         "description": "The location in which all resources should be deployed."
       }
     },
+    "varcosmosdbName": {
+      "type": "string",
+      "defaultValue": "[format('{0}-cosmosdb-research{1}', parameters('namePrefix'), parameters('uniqueid'))]"
+    },
+    "storageAccountName": {
+      "type": "string",
+      "defaultValue": "mystorageaccount",
+      "metadata": {
+        "description": "The name of the container registry to be deployed"
+      }
+    },
     "storageSkuName": {
       "type": "string",
       "defaultValue": "Standard_LRS",
@@ -42,14 +53,24 @@
         "Premium_ZRS",
         "Standard_GZRS",
         "Standard_RAGZRS"
-      ]
+      ],
+      "metadata": {
+        "description": "The SKU to use for the Storage Account"
+      }
+    },
+    "aiSearchRegion": {
+      "type": "string",
+      "defaultValue": "East US",
+      "metadata": {
+        "description": "The region for the Azure AI Search service"
+      }
     }
   },
   "variables": {
     "varMachineLearning": "[format('{0}aml{1}', parameters('namePrefix'), parameters('uniqueid'))]",
     "logWorkspaceName": "[format('log-{0}', parameters('uniqueid'))]",
     "varMLAppInsightsName": "[format('{0}-ml-app-ins-{1}', parameters('namePrefix'), parameters('uniqueid'))]",
-    "varcosmosdbName": "[format('{0}-cosmosdb-research{1}', parameters('namePrefix'), parameters('uniqueid'))]",
+    "varStorageAccountName": "[format('{0}{1}{2}', parameters('namePrefix'), parameters('storageAccountName'), parameters('uniqueid'))]",
     "aiSearchName": "aisearch",
     "varaiSearchName": "[format('{0}{1}{2}', parameters('namePrefix'), variables('aiSearchName'), parameters('uniqueid'))]"
   },
@@ -96,7 +117,7 @@
       "name": "[format('stml{0}', parameters('uniqueid'))]",
       "location": "[parameters('location')]",
       "sku": {
-        "name": "[parameters('storageSkuName')]"
+        "name": "Standard_LRS"
       },
       "kind": "StorageV2",
       "properties": {}
@@ -138,7 +159,7 @@
     {
       "type": "Microsoft.DocumentDB/databaseAccounts",
       "apiVersion": "2024-02-15-preview",
-      "name": "[variables('varcosmosdbName')]",
+      "name": "[parameters('varcosmosdbName')]",
       "location": "[parameters('location')]",
       "kind": "GlobalDocumentDB",
       "tags": {
@@ -204,10 +225,29 @@
       }
     },
     {
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2019-06-01",
+      "name": "[variables('varStorageAccountName')]",
+      "kind": "StorageV2",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "[parameters('storageSkuName')]"
+      },
+      "properties": {
+        "networkAcls": {
+          "bypass": "AzureServices",
+          "defaultAction": "Allow",
+          "ipRules": [],
+          "virtualNetworkRules": []
+        },
+        "allowBlobPublicAccess": true
+      }
+    },
+    {
       "type": "Microsoft.Search/searchServices",
       "apiVersion": "2023-11-01",
       "name": "[variables('varaiSearchName')]",
-      "location": "[parameters('location')]",
+      "location": "[parameters('aiSearchRegion')]",
       "sku": {
         "name": "standard"
       },
@@ -241,15 +281,19 @@
     },
     "cosmosdbName": {
       "type": "string",
-      "value": "[variables('varcosmosdbName')]"
+      "value": "[parameters('varcosmosdbName')]"
     },
     "cosmosDbUri": {
       "type": "string",
-      "value": "[reference(resourceId('Microsoft.DocumentDB/databaseAccounts', variables('varcosmosdbName')), '2024-02-15-preview').documentEndpoint]"
+      "value": "[reference(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('varcosmosdbName')), '2024-02-15-preview').documentEndpoint]"
+    },
+    "cosmosDbKey": {
+      "type": "string",
+      "value": "[listKeys(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('varcosmosdbName')), '2024-02-15-preview').primaryMasterKey]"
     },
     "storageAccountId": {
       "type": "string",
-      "value": "[resourceId('Microsoft.Storage/storageAccounts', format('stml{0}', parameters('uniqueid')))]"
+      "value": "[resourceId('Microsoft.Storage/storageAccounts', variables('varStorageAccountName'))]"
     },
     "aiSearchName": {
       "type": "string",
